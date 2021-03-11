@@ -1,0 +1,168 @@
+MouseClick:
+	cmp MouseStatus.buttons, MK_LBUTTON 
+	je NewRock
+	cmp MouseStatus.buttons, MK_RBUTTON 
+	jne ExplodeRocks
+
+
+NewRock:
+	mov ebx,  Rock1.rockbitmaps ;; 
+	mov ptrPika, ebx 
+
+	mov ebx, Rock1.rockxpos
+	mov x, ebx
+
+	mov ebx, Rock1.rockypos
+	mov y, ebx 
+
+	invoke Clearprev , ptrPika, x , y
+	;;get the xvalue
+	mov ebx, MouseStatus.horiz
+	mov Rock1.rockxpos, ebx
+	mov x, ebx 
+
+	;;get the yvalue
+	mov ebx, MouseStatus.vert
+	mov  Rock1.rockypos, ebx
+	mov y, ebx 
+
+    mov ebx,  Rock1.rockbitmaps ;; 
+	mov ptrPika, ebx 
+
+	invoke	BasicBlit, ptrPika , x , y 
+
+
+
+;;part of update fireblast
+
+xor esi, esi
+jmp ForBlastEval
+
+ForBlastBody:
+	;;get pointer to the beginning
+	;;mov edx, OFFSET RockArr
+	;;add the type * index to get pointer to the right position
+	;;edx contains a pointer to a struct in the arr
+
+	;; b1=> 0 compact 
+						;;b1 => 1 exploding ==> iterate through explosion bitmaps
+						;;b2 => 1 => xplosion 1
+						;;b3 => 1 => xplosion 2
+						;;b4 => 1 => explosion 3
+						;;b5 => 1 => explosion 4
+						;;b6 => 1 => the rock is gone
+	
+	;;load the blast
+	;;check if the blast is active
+	test (fireblast PTR [FireArr + esi]).fireblaststates, 01h
+	jz IncrementBlastLOOP
+
+	;;if active load it up
+	mov ebx, (fireblast PTR [FireArr + esi]).fireblastxpos
+	mov xprev, ebx
+	add ebx, (fireblast PTR [FireArr + esi]).fireblastvelocity
+	mov (fireblast PTR [FireArr + esi]).fireblastxpos, ebx 
+	mov oneX, ebx
+
+	mov ebx, (fireblast PTR [FireArr + esi]).fireblastypos
+	mov yprev, ebx 
+	mov oneY, ebx
+	mov ebx, (fireblast PTR [FireArr + esi]).fireblastptr ;;bitmaps
+	mov oneBitmap, ebx
+
+
+;;check collision with rock
+CollisionWithRock:
+;;disappear, set the rock to explosion
+;;explode call explosion on the rock
+
+;;i ==> edi
+xor edi, edi
+jmp ForCollisionEval
+
+ForCollisionBody:
+	;;get pointer to the beginning
+	;;mov edx, OFFSET RockArr
+	;;add the type * index to get pointer to the right position
+	;;edx contains a pointer to a struct in the arr
+
+	;; b1=> 0 compact 
+						;;b1 => 1 exploding ==> iterate through explosion bitmaps
+						;;b2 => 1 => xplosion 1
+						;;b3 => 1 => xplosion 2
+						;;b4 => 1 => explosion 3
+						;;b5 => 1 => explosion 4
+						;;b6 => 1 => the rock is gone
+
+	;;;;check for an active rock
+	test (rockobject PTR [RockArr + edi]).rockstates, 1000000b ;;check if the particular rock is on the screen
+	jz IncrementLOOP;;if not
+	test (rockobject PTR [RockArr + edi]).rockstates, 01h  ;; rock already exploding
+	jnz IncrementLOOP
+
+	;;load the current blast
+	mov ebx, (fireblast PTR [FireArr + esi]).fireblastxpos
+	mov oneX, edi
+	mov ebx, (fireblast PTR [FireArr + esi]).fireblastypos
+	mov oneY, edi
+	mov ebx, (fireblast PTR [FireArr + esi]).fireblastptr
+	mov oneBitmap, ebx
+
+	;;load a rock
+	mov ebx, (rockobject PTR [RockArr + edi]).rockxpos
+	mov twoX, ebx
+	mov ebx, (rockobject PTR [RockArr + edi]).rockypos
+	mov twoY, ebx
+	mov ebx, (rockobject PTR [RockArr + edi]).rockbitmaps
+	mov twoBitmap, ebx
+
+	invoke CheckIntersect, oneX, oneY, oneBitmap, twoX, twoY, twoBitmap
+	cmp eax, 1 
+	jne IncrementLOOP ;;skip the explosion
+
+	;;put the rock in explosion mode
+	xor (rockobject PTR [RockArr + edi]).rockstates, 11b ;;set to exploding
+	;;deactivate the missile
+	xor (fireblast PTR [FireArr + esi]).fireblaststates, 01h
+	;;xor (fireblast PTR [FireArr + esi]).
+	mov ecx, OFFSET RockArr
+	add ecx, edi
+	Invoke ExplodeRock , ecx  ;;call the function with a pointer to the rock
+	;;call reduce pikas life and check game
+	;;dec Pikachu.Life
+	;;shr Pikachu.Life, 1  ;; at 0 game over
+
+IncrementLOOP:
+	add edi, TYPE RockArr
+
+ForCollisionEval:
+ cmp edi, SiZEOF RockArr
+ jl ForCollisionBody
+
+
+
+OutOfBounds:
+	;;deactivate the blast ready for next
+
+	mov edi , (fireblast PTR [FireArr + esi]).fireblastxpos
+	mov x, edi
+	cmp Fire1.fireblastxpos, 660
+	jl InBounds
+	xor (fireblast PTR [FireArr + esi]).fireblaststates, 01h
+
+InBounds:
+	;;invoke Clearprev, ptrV, xprev, y
+	invoke Clearprev, oneBitmap, xprev, yprev
+	test (fireblast PTR [FireArr + esi]).fireblaststates, 01h
+	jz IncrementBlastLOOP
+	;;draw the blast
+	invoke BasicBlit, oneBitmap, oneX, oneY
+
+	;;call reduce pikas life and check game
+	;;dec Pikachu.Life
+IncrementBlastLOOP:
+	add esi, TYPE FireArr
+ ForBlastEval:
+ cmp esi, SIZEOF FireArr
+ jl ForBlastBody
+

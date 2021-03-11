@@ -1,0 +1,22 @@
+;; init pika position 
+	mov ecx, OFFSET Pikachu ;; load the address of pika
+	mov (Pikaobject PTR [ecx]).pikaxpos, 300 ;; init the pos to 200
+	mov (Pikaobject PTR [ecx]).pikaypos, 300 ;; init the pos to 200
+	mov  edi, OFFSET pika;; load the address of pika bitmap
+	mov (Pikaobject PTR [ecx]).pikaptr, edi ;; load the address of the bitmap
+
+	;;init ball position
+	mov edx, OFFSET ballA ;; load the address of ballA
+	mov (ballobject PTR [edx]).ballxpos , 300 ;; above pika
+	mov (ballobject PTR [edx]).ballypos , 10  ;; above pika
+	mov edi, OFFSET pball ;; load the address to the ball bitmap
+	mov (ballobject PTR [edx]).ballptr, edi ;; load the address to the ballbitmap
+	mov (ballobject PTR [edx]).ballangle, 0 ;; the ball is 0 rotated
+
+	;;BasicBlit PROC USES edi edx ebx ecx esi eax ptrBitmap:PTR EECS205BITMAP , xcenter:DWORD, ycenter:DWORD
+	mov ebx, Pikachu.pikaptr ;;
+	mov ptrPika, ebx
+	mov ebx, Pikachu.pikaxpos
+	mov initxPika, ebx 
+	mov ebx, Pikachu.pikaypos
+	mov inityPika, ebx
